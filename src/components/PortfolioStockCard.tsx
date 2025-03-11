@@ -1,8 +1,8 @@
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PortfolioStock } from "@/contexts/StockContext";
-import { useStock } from "@/contexts/StockContext";
+import { PortfolioStock, useStock } from "@/contexts/StockContext";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -36,7 +35,7 @@ const PortfolioStockCard = ({ stock, currentPrice }: PortfolioStockCardProps) =>
   };
 
   return (
-    <Card className="border-l-4 border-l-purple-500">
+    <Card className="border-l-4 border-l-primary">
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div>
@@ -82,7 +81,7 @@ const PortfolioStockCard = ({ stock, currentPrice }: PortfolioStockCardProps) =>
                     min="1"
                     max={stock.shares}
                     value={sharesToSell}
-                    onChange={(e) => setSharesToSell(parseInt(e.target.value))}
+                    onChange={(e) => setSharesToSell(parseInt(e.target.value) || 1)}
                   />
                   
                   <p className="text-sm text-muted-foreground mt-2">
