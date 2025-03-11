@@ -1,0 +1,109 @@
+
+import { useState } from "react";
+import { Stock, useStock } from "@/contexts/StockContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import StockChart from "./StockChart";
+
+interface BuyStockDialogProps {
+  stock: Stock | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
+  const [shares, setShares] = useState<number>(1);
+  const { buyStock } = useStock();
+  const { user } = useAuth();
+
+  if (!stock) return null;
+
+  const total = shares * stock.price;
+  const canAfford = user ? user.balance >= total : false;
+
+  const handleBuy = async () => {
+    await buyStock(stock.symbol, shares);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Buy {stock.symbol} Stock</DialogTitle>
+          <DialogDescription>
+            {stock.name} - Current price: ${stock.price.toFixed(2)}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="py-4 h-64">
+          <StockChart stock={stock} height={200} />
+        </div>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="shares">Number of shares to buy</Label>
+            <Input
+              id="shares"
+              type="number"
+              min="1"
+              value={shares}
+              onChange={(e) => setShares(parseInt(e.target.value) || 1)}
+            />
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span>Total cost:</span>
+            <span className="font-semibold">${total.toFixed(2)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span>Your balance:</span>
+            <span className="font-semibold">${user?.balance.toFixed(2)}</span>
+          </div>
+          
+          {!canAfford && (
+            <p className="text-sm text-danger">
+              Insufficient funds for this purchase
+            </p>
+          )}
+          
+          <div className="py-2">
+            <h4 className="text-sm font-medium mb-2">Prediction</h4>
+            <div className="bg-muted/50 p-2 rounded-md">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Predicted price:</span>
+                <span className="font-semibold">${stock.prediction.price.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-sm">Confidence:</span>
+                <span className="font-semibold">{(stock.prediction.confidence * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleBuy} disabled={!canAfford}>
+            Buy {shares} share{shares !== 1 ? 's' : ''}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default BuyStockDialog;
