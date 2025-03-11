@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "bg-card border-r border-border transition-all duration-300 ease-in-out overflow-hidden",
+        "bg-background border-r border-border transition-all duration-300 ease-in-out overflow-hidden",
         isOpen ? "w-64" : "w-0 md:w-16"
       )}
     >
