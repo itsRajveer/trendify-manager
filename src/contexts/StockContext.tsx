@@ -1,11 +1,127 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { StockContext } from '@/contexts/StockContext';
-import { mockStocks } from '@/data/mockStocks';
-import { calculateUpdatedPortfolioValues, updateStockPrices } from '@/utils/stockUtils';
-import type { Stock, Portfolio, Transaction } from '@/types/stock';
+
+// Types
+export interface Stock {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  marketCap: number;
+  historicalData: { date: string; price: number }[];
+  prediction: { price: number; confidence: number };
+}
+
+export interface Portfolio {
+  id: string;
+  userId: string;
+  stocks: PortfolioStock[];
+  totalValue: number;
+  profitLoss: number;
+}
+
+export interface PortfolioStock {
+  symbol: string;
+  shares: number;
+  avgPrice: number;
+  totalCost: number;
+  currentValue: number;
+  profitLoss: number;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  symbol: string;
+  type: 'buy' | 'sell';
+  shares: number;
+  price: number;
+  total: number;
+  date: string;
+}
+
+interface StockContextType {
+  stocks: Stock[];
+  portfolio: Portfolio | null;
+  transactions: Transaction[];
+  isLoading: boolean;
+  buyStock: (symbol: string, shares: number) => Promise<void>;
+  sellStock: (symbol: string, shares: number) => Promise<void>;
+  refreshStockData: () => Promise<void>;
+}
+
+const StockContext = createContext<StockContextType | undefined>(undefined);
+
+// Mock data for demo
+const mockStocks: Stock[] = [
+  {
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    price: 175.50,
+    change: 2.35,
+    changePercent: 1.36,
+    marketCap: 2800000000000,
+    historicalData: Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: 160 + Math.random() * 20
+    })),
+    prediction: { price: 185.20, confidence: 0.75 }
+  },
+  {
+    symbol: 'MSFT',
+    name: 'Microsoft Corporation',
+    price: 360.20,
+    change: -1.50,
+    changePercent: -0.41,
+    marketCap: 2600000000000,
+    historicalData: Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: 350 + Math.random() * 15
+    })),
+    prediction: { price: 370.80, confidence: 0.65 }
+  },
+  {
+    symbol: 'GOOGL',
+    name: 'Alphabet Inc.',
+    price: 145.10,
+    change: 0.80,
+    changePercent: 0.55,
+    marketCap: 1900000000000,
+    historicalData: Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: 140 + Math.random() * 10
+    })),
+    prediction: { price: 148.30, confidence: 0.60 }
+  },
+  {
+    symbol: 'AMZN',
+    name: 'Amazon.com Inc.',
+    price: 132.80,
+    change: 1.25,
+    changePercent: 0.95,
+    marketCap: 1400000000000,
+    historicalData: Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: 125 + Math.random() * 15
+    })),
+    prediction: { price: 140.50, confidence: 0.72 }
+  },
+  {
+    symbol: 'TSLA',
+    name: 'Tesla, Inc.',
+    price: 248.50,
+    change: -3.20,
+    changePercent: -1.27,
+    marketCap: 780000000000,
+    historicalData: Array.from({ length: 30 }, (_, i) => ({
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      price: 240 + Math.random() * 20
+    })),
+    prediction: { price: 260.10, confidence: 0.55 }
+  }
+];
 
 export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -26,14 +142,17 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadUserData = async () => {
     setIsLoading(true);
     try {
+      // Simulate API calls
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Load from localStorage if available (for demo)
       const savedPortfolio = localStorage.getItem(`portfolio_${user?.id}`);
       const savedTransactions = localStorage.getItem(`transactions_${user?.id}`);
       
       if (savedPortfolio) {
         setPortfolio(JSON.parse(savedPortfolio));
       } else {
+        // Create empty portfolio
         setPortfolio({
           id: '1',
           userId: user?.id || '',
@@ -49,6 +168,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTransactions([]);
       }
       
+      // Refresh stock data
       refreshStockData();
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -60,18 +180,62 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const refreshStockData = async () => {
     try {
+      // Simulate API call for updated stock prices
       await new Promise(resolve => setTimeout(resolve, 500));
-      const updatedStocks = updateStockPrices(stocks);
+      
+      // Update with slight variations to simulate real-time changes
+      const updatedStocks = stocks.map(stock => {
+        const changeAmount = (Math.random() - 0.45) * 2; // Slightly biased towards positive
+        const newPrice = Math.max(stock.price + changeAmount, 0.01);
+        return {
+          ...stock,
+          price: parseFloat(newPrice.toFixed(2)),
+          change: parseFloat((newPrice - stock.price + stock.change).toFixed(2)),
+          changePercent: parseFloat((((newPrice - stock.price) / stock.price) * 100 + stock.changePercent).toFixed(2))
+        };
+      });
+      
       setStocks(updatedStocks);
       
+      // Update portfolio values based on new prices
       if (portfolio) {
-        const updatedPortfolio = calculateUpdatedPortfolioValues(portfolio, updatedStocks);
-        setPortfolio(updatedPortfolio);
-        localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
+        updatePortfolioValues(updatedStocks);
       }
     } catch (error) {
       console.error('Error refreshing stock data:', error);
     }
+  };
+
+  const updatePortfolioValues = (currentStocks: Stock[]) => {
+    if (!portfolio) return;
+    
+    const updatedStocks = portfolio.stocks.map(portfolioStock => {
+      const stockData = currentStocks.find(s => s.symbol === portfolioStock.symbol);
+      if (!stockData) return portfolioStock;
+      
+      const currentValue = portfolioStock.shares * stockData.price;
+      const profitLoss = currentValue - portfolioStock.totalCost;
+      
+      return {
+        ...portfolioStock,
+        currentValue: parseFloat(currentValue.toFixed(2)),
+        profitLoss: parseFloat(profitLoss.toFixed(2))
+      };
+    });
+    
+    const totalValue = updatedStocks.reduce((sum, stock) => sum + stock.currentValue, 0);
+    const totalCost = updatedStocks.reduce((sum, stock) => sum + stock.totalCost, 0);
+    const profitLoss = totalValue - totalCost;
+    
+    const updatedPortfolio: Portfolio = {
+      ...portfolio,
+      stocks: updatedStocks,
+      totalValue: parseFloat(totalValue.toFixed(2)),
+      profitLoss: parseFloat(profitLoss.toFixed(2))
+    };
+    
+    setPortfolio(updatedPortfolio);
+    localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
   };
 
   const buyStock = async (symbol: string, shares: number) => {
@@ -90,16 +254,19 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const totalCost = stock.price * shares;
       
+      // Check if user has enough balance
       if (user.balance < totalCost) {
         throw new Error('Insufficient funds');
       }
       
+      // Update user balance (in a real app, this would be an API call)
       const updatedUser = {
         ...user,
         balance: parseFloat((user.balance - totalCost).toFixed(2))
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
+      // Create transaction
       const transaction: Transaction = {
         id: Date.now().toString(),
         userId: user.id,
@@ -115,6 +282,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setTransactions(updatedTransactions);
       localStorage.setItem(`transactions_${user.id}`, JSON.stringify(updatedTransactions));
       
+      // Update portfolio
       const currentPortfolio = portfolio || {
         id: '1',
         userId: user.id,
@@ -127,6 +295,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const existingStockIndex = updatedPortfolioStocks.findIndex(s => s.symbol === symbol);
       
       if (existingStockIndex >= 0) {
+        // Update existing stock
         const existingStock = updatedPortfolioStocks[existingStockIndex];
         const newTotalShares = existingStock.shares + shares;
         const newTotalCost = existingStock.totalCost + totalCost;
@@ -141,6 +310,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           profitLoss: parseFloat(((stock.price * newTotalShares) - newTotalCost).toFixed(2))
         };
       } else {
+        // Add new stock to portfolio
         updatedPortfolioStocks.push({
           symbol,
           shares,
@@ -151,10 +321,19 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       }
       
-      const updatedPortfolio = calculateUpdatedPortfolioValues(
-        { ...currentPortfolio, stocks: updatedPortfolioStocks },
-        stocks
+      const newTotalValue = updatedPortfolioStocks.reduce(
+        (sum, s) => sum + s.currentValue, 0
       );
+      const newTotalCost = updatedPortfolioStocks.reduce(
+        (sum, s) => sum + s.totalCost, 0
+      );
+      
+      const updatedPortfolio: Portfolio = {
+        ...currentPortfolio,
+        stocks: updatedPortfolioStocks,
+        totalValue: parseFloat(newTotalValue.toFixed(2)),
+        profitLoss: parseFloat((newTotalValue - newTotalCost).toFixed(2))
+      };
       
       setPortfolio(updatedPortfolio);
       localStorage.setItem(`portfolio_${user.id}`, JSON.stringify(updatedPortfolio));
@@ -192,12 +371,14 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const saleValue = stock.price * shares;
       
+      // Update user balance
       const updatedUser = {
         ...user,
         balance: parseFloat((user.balance + saleValue).toFixed(2))
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
+      // Create transaction
       const transaction: Transaction = {
         id: Date.now().toString(),
         userId: user.id,
@@ -213,13 +394,17 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setTransactions(updatedTransactions);
       localStorage.setItem(`transactions_${user.id}`, JSON.stringify(updatedTransactions));
       
+      // Update portfolio
       let updatedPortfolioStocks = [...portfolio.stocks];
+      const stockIndex = updatedPortfolioStocks.findIndex(s => s.symbol === symbol);
       
       if (portfolioStock.shares === shares) {
+        // Remove stock completely
         updatedPortfolioStocks = updatedPortfolioStocks.filter(s => s.symbol !== symbol);
       } else {
-        const stockIndex = updatedPortfolioStocks.findIndex(s => s.symbol === symbol);
+        // Update shares count
         const newShares = portfolioStock.shares - shares;
+        // Keep the same average price but reduce total cost proportionally
         const newTotalCost = portfolioStock.avgPrice * newShares;
         
         updatedPortfolioStocks[stockIndex] = {
@@ -231,10 +416,19 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       }
       
-      const updatedPortfolio = calculateUpdatedPortfolioValues(
-        { ...portfolio, stocks: updatedPortfolioStocks },
-        stocks
+      const newTotalValue = updatedPortfolioStocks.reduce(
+        (sum, s) => sum + s.currentValue, 0
       );
+      const newTotalCost = updatedPortfolioStocks.reduce(
+        (sum, s) => sum + s.totalCost, 0
+      );
+      
+      const updatedPortfolio: Portfolio = {
+        ...portfolio,
+        stocks: updatedPortfolioStocks,
+        totalValue: parseFloat(newTotalValue.toFixed(2)),
+        profitLoss: parseFloat((newTotalValue - newTotalCost).toFixed(2))
+      };
       
       setPortfolio(updatedPortfolio);
       localStorage.setItem(`portfolio_${user.id}`, JSON.stringify(updatedPortfolio));
@@ -262,4 +456,12 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
     </StockContext.Provider>
   );
+};
+
+export const useStock = () => {
+  const context = useContext(StockContext);
+  if (context === undefined) {
+    throw new Error('useStock must be used within a StockProvider');
+  }
+  return context;
 };
