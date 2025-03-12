@@ -42,7 +42,7 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Buy {stock.symbol} Stock</DialogTitle>
           <DialogDescription>
@@ -50,11 +50,11 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-2 h-48">
+        <div className="py-2 h-40">
           <StockChart stock={stock} height={160} />
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[50vh] overflow-y-auto py-2 pr-1">
           <div className="space-y-2">
             <Label htmlFor="shares">Number of shares to buy</Label>
             <Input
