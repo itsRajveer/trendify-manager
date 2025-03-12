@@ -24,7 +24,7 @@ interface BuyStockDialogProps {
 const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   const [shares, setShares] = useState<number>(1);
   const { buyStock } = useStock();
-  const { user } = useAuth();
+  const { user, updateUserBalance } = useAuth();
 
   if (!stock) return null;
 
@@ -32,13 +32,17 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   const canAfford = user ? user.balance >= total : false;
 
   const handleBuy = async () => {
+    if (!user) return;
+    
     await buyStock(stock.symbol, shares);
+    // Update the user balance immediately in the UI
+    updateUserBalance(user.balance - total);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Buy {stock.symbol} Stock</DialogTitle>
           <DialogDescription>
@@ -46,11 +50,11 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 h-64">
-          <StockChart stock={stock} height={200} />
+        <div className="py-2 h-48">
+          <StockChart stock={stock} height={160} />
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="shares">Number of shares to buy</Label>
             <Input
@@ -78,8 +82,8 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
             </p>
           )}
           
-          <div className="py-2">
-            <h4 className="text-sm font-medium mb-2">Prediction</h4>
+          <div className="py-1">
+            <h4 className="text-sm font-medium mb-1">Prediction</h4>
             <div className="bg-muted/50 p-2 rounded-md">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Predicted price:</span>
