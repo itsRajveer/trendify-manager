@@ -14,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   updateUserBalance: (newBalance: number) => void;
+  addToBalance: (amount: number) => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -47,6 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+  
+  const addToBalance = (amount: number) => {
+    if (user) {
+      const newBalance = user.balance + amount;
+      updateUserBalance(newBalance);
     }
   };
 
@@ -115,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         updateUserBalance,
+        addToBalance,
         login,
         signup,
         logout,

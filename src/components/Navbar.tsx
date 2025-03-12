@@ -1,9 +1,11 @@
 
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Menu, X, RefreshCw, Bell, LogOut } from "lucide-react";
+import { Menu, X, RefreshCw, Bell, LogOut, Plus } from "lucide-react";
 import { useStock } from "@/contexts/StockContext";
 import { useNavigate } from "react-router-dom";
+import AddFundsDialog from "./AddFundsDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +23,7 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
   const { user, logout } = useAuth();
   const { refreshStockData } = useStock();
   const navigate = useNavigate();
+  const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -80,6 +83,10 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
                 <DropdownMenuItem>
                   Balance: ${user.balance.toLocaleString()}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsAddFundsOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>Add Funds</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -89,6 +96,11 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
           </div>
         )}
       </div>
+      
+      <AddFundsDialog 
+        open={isAddFundsOpen} 
+        onOpenChange={setIsAddFundsOpen} 
+      />
     </header>
   );
 };
