@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadStripe } from "@stripe/stripe-js";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-// Replace with your own publishable key or keep using this test key
+// Replace with your own publishable key
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 const PRESET_AMOUNTS = [10, 50, 100, 500];
@@ -48,7 +49,17 @@ const AddFundsDialog = ({ open, onOpenChange }: AddFundsDialogProps) => {
 
     setIsLoading(true);
     try {
-      // Simulate Stripe payment process
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe failed to load');
+      }
+
+      // In a real application, you would:
+      // 1. Call your backend to create a Stripe Checkout Session
+      // 2. Redirect to Stripe Checkout
+      // 3. Handle the success/cancel redirects
+      // 
+      // For this demo, we'll simulate the payment:
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Add the amount to user's balance
@@ -58,6 +69,7 @@ const AddFundsDialog = ({ open, onOpenChange }: AddFundsDialogProps) => {
       onOpenChange(false);
     } catch (error) {
       toast.error("Payment failed. Please try again.");
+      console.error('Payment error:', error);
     } finally {
       setIsLoading(false);
     }
