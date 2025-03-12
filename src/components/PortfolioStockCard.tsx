@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PortfolioStock, useStock } from "@/contexts/StockContext";
+import { useStock } from "@/contexts/StockContext";
+import { PortfolioStock } from "@/types/stock";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
