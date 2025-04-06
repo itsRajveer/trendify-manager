@@ -9,27 +9,29 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Stock } from "@/contexts/StockContext";
+
+interface ChartDataPoint {
+  date: string;
+  price: number;
+}
 
 interface StockChartProps {
-  stock: Stock;
+  data: ChartDataPoint[];
   height?: number;
   showAxis?: boolean;
   color?: string;
 }
 
 const StockChart = ({ 
-  stock, 
+  data, 
   height = 300, 
   showAxis = true,
   color = "#8B5CF6" 
 }: StockChartProps) => {
-  const data = stock.historicalData.map(item => ({
-    date: item.date,
-    price: item.price,
-  }));
-
-  const positiveChange = stock.change >= 0;
+  // Determine if the stock is trending up or down
+  const positiveChange = data.length >= 2 ? 
+    data[data.length - 1].price >= data[0].price : true;
+  
   const lineColor = color || (positiveChange ? "#10B981" : "#EF4444");
 
   return (

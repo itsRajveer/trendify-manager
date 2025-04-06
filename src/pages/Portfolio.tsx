@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { useStock } from "@/contexts/StockContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, TrendingUp, TrendingDown } from "lucide-react";
@@ -126,8 +127,8 @@ const Portfolio = () => {
                         stock={{
                           symbol: portfolioStock.symbol,
                           shares: portfolioStock.shares || 0,
-                          avgPrice: portfolioStock.price || 0,
-                          totalCost: portfolioStock.price * portfolioStock.shares,
+                          avgPrice: portfolioStock.price || 0, // Use the price property
+                          totalCost: (portfolioStock.price || 0) * (portfolioStock.shares || 0),
                           currentValue: (stockData?.price || 0) * (portfolioStock.shares || 0),
                           profitLoss: ((stockData?.price || 0) - (portfolioStock.price || 0)) * (portfolioStock.shares || 0)
                         }}

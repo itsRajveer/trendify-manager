@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useStock, Stock } from "@/contexts/StockContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import StockChart from "@/components/StockChart";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Search, Info } from "lucide-react";
@@ -22,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import StockHistoryChart from "@/components/StockHistoryChart";
 
 const Stocks = () => {
   const { stocks, isLoading } = useStock();
@@ -211,11 +211,9 @@ const Stocks = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-64 mb-6">
-                  <StockChart stock={selectedStock} />
-                </div>
+                <StockHistoryChart symbol={selectedStock.symbol} name={selectedStock.name} />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                   <div>
                     <h3 className="text-sm font-medium mb-2">Market Cap</h3>
                     <p>${(selectedStock.marketCap / 1000000000).toFixed(2)}B</p>

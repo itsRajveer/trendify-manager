@@ -21,10 +21,11 @@ export interface Portfolio {
 export interface PortfolioStock {
   symbol: string;
   shares: number;
-  avgPrice: number;
-  totalCost: number;
-  currentValue: number;
-  profitLoss: number;
+  price: number; // Added to match the backend property
+  avgPrice?: number;
+  totalCost?: number;
+  currentValue?: number;
+  profitLoss?: number;
 }
 
 export interface Transaction {
@@ -47,3 +48,26 @@ export interface StockContextType {
   sellStock: (symbol: string, shares: number) => Promise<void>;
   refreshStockData: () => Promise<void>;
 }
+
+export interface HistoricalDataPoint {
+  date: string;
+  close: number;
+  high: number;
+  low: number;
+  open: number;
+  volume: number;
+}
+
+export interface HistoricalDataResponse {
+  [symbol: string]: {
+    [date: string]: {
+      close: number;
+      high: number;
+      low: number;
+      open: number;
+      volume: number;
+    }
+  }
+}
+
+export type TimeRange = '7d' | '14d' | '1m' | '2m' | '3m';
