@@ -33,8 +33,10 @@ const Dashboard = () => {
   };
 
   // Find best and worst performing stocks
-  const bestStock = [...stocks].sort((a, b) => b.changePercent - a.changePercent)[0];
-  const worstStock = [...stocks].sort((a, b) => a.changePercent - b.changePercent)[0];
+  const bestStock = stocks.length > 0 ? 
+    [...stocks].sort((a, b) => b.changePercent - a.changePercent)[0] : null;
+  const worstStock = stocks.length > 0 ? 
+    [...stocks].sort((a, b) => a.changePercent - b.changePercent)[0] : null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -92,51 +94,55 @@ const Dashboard = () => {
       
       {/* Best and Worst Performing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-success" />
-              <div>
-                <CardDescription>Best Performer</CardDescription>
-                <CardTitle>{bestStock?.symbol} · {bestStock?.name}</CardTitle>
+        {bestStock && (
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-success" />
+                <div>
+                  <CardDescription>Best Performer</CardDescription>
+                  <CardTitle>{bestStock.symbol} · {bestStock.name}</CardTitle>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-2xl font-bold">${bestStock?.price.toFixed(2)}</div>
-              <div className="text-success">
-                +{bestStock?.change.toFixed(2)} ({bestStock?.changePercent.toFixed(2)}%)
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-2xl font-bold">${bestStock.price.toFixed(2)}</div>
+                <div className="text-success">
+                  +{bestStock.change.toFixed(2)} ({bestStock.changePercent.toFixed(2)}%)
+                </div>
               </div>
-            </div>
-            <div className="h-40">
-              {bestStock && <StockChart stock={bestStock} height={160} />}
-            </div>
-          </CardContent>
-        </Card>
+              <div className="h-40">
+                <StockChart stock={bestStock} height={160} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center">
-              <TrendingDown className="h-5 w-5 mr-2 text-danger" />
-              <div>
-                <CardDescription>Worst Performer</CardDescription>
-                <CardTitle>{worstStock?.symbol} · {worstStock?.name}</CardTitle>
+        {worstStock && (
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center">
+                <TrendingDown className="h-5 w-5 mr-2 text-danger" />
+                <div>
+                  <CardDescription>Worst Performer</CardDescription>
+                  <CardTitle>{worstStock.symbol} · {worstStock.name}</CardTitle>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-2xl font-bold">${worstStock?.price.toFixed(2)}</div>
-              <div className="text-danger">
-                {worstStock?.change.toFixed(2)} ({worstStock?.changePercent.toFixed(2)}%)
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-2xl font-bold">${worstStock.price.toFixed(2)}</div>
+                <div className="text-danger">
+                  {worstStock.change.toFixed(2)} ({worstStock.changePercent.toFixed(2)}%)
+                </div>
               </div>
-            </div>
-            <div className="h-40">
-              {worstStock && <StockChart stock={worstStock} height={160} />}
-            </div>
-          </CardContent>
-        </Card>
+              <div className="h-40">
+                <StockChart stock={worstStock} height={160} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Stock Listings */}

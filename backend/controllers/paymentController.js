@@ -1,119 +1,118 @@
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { db } = require('../config/firebase');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { db } = require("../config/firebase");
 
-// Create a checkout session for adding funds
+// Create a Stripe checkout session for adding funds
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { amount, userId } = req.body;
-    
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
-    }
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
-    
-    // Get user data from Firebase
-    const userSnapshot = await db.ref(`users/${userId}`).once('value');
-    const user = userSnapshot.val();
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // Create a Stripe checkout session
+    const { amount } = req.body;
+    const userId = req.user.uid;
+
+    // Create a checkout session
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: "usd",
             product_data: {
-              name: 'Account Funds',
-              description: 'Add funds to your trading account',
+              name: "Add Funds to Account",
+              description: `Add $${amount} to your trading account`,
             },
-            unit_amount: Math.round(amount * 100), // Convert to cents
+            unit_amount: amount * 100, // amount in cents
           },
           quantity: 1,
         },
       ],
-      mode: 'payment',
-      success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/dashboard`,
-      client_reference_id: userId,
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/`,
+      client_reference_id: userId, // Store userId to identify the user later
       metadata: {
-        userId: userId,
-        amount: amount.toString(),
+        userId,
+        amount,
       },
     });
-    
-    res.json({ id: session.id, url: session.url });
+
+    res.json({ url: session.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: error.message });
+    console.error("Error creating checkout session:", error);
+    res.status(500).json({ error: "Failed to create checkout session" });
   }
 };
 
 // Handle webhook events from Stripe
 exports.handleWebhook = async (req, res) => {
-  const signature = req.headers['stripe-signature'];
+  const payload = req.rawBody;
+  const sig = req.headers["stripe-signature"];
   let event;
-  
+
   try {
+    // Verify the webhook signature
     event = stripe.webhooks.constructEvent(
-      req.rawBody,
-      signature,
+      payload,
+      sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-  } catch (error) {
-    console.error('Webhook signature verification failed:', error);
-    return res.status(400).send(`Webhook Error: ${error.message}`);
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  
-  // Handle checkout.session.completed event
-  if (event.type === 'checkout.session.completed') {
+
+  // Handle specific event types
+  if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     
     try {
-      // Get user ID and amount from metadata
-      const { userId, amount } = session.metadata;
-      
-      if (!userId || !amount) {
-        throw new Error('Missing user ID or amount in session metadata');
-      }
-      
-      // Update user's balance in Firebase
-      const userSnapshot = await db.ref(`users/${userId}`).once('value');
-      const user = userSnapshot.val();
-      
-      if (!user) {
-        throw new Error(`User ${userId} not found`);
-      }
-      
-      const currentBalance = user.balance || 0;
-      const newBalance = currentBalance + parseFloat(amount);
-      
-      await db.ref(`users/${userId}`).update({ balance: newBalance });
-      
-      // Create a record of the transaction
-      await db.ref(`transactions/${userId}`).push({
-        id: Date.now().toString(),
-        userId: userId,
-        type: 'deposit',
-        amount: parseFloat(amount),
-        date: new Date().toISOString(),
-        paymentIntentId: session.payment_intent,
-      });
-      
-      console.log(`Successfully processed payment for user ${userId}: $${amount}`);
+      // Add the fund amount to the user's balance
+      await handleSuccessfulPayment(
+        session.client_reference_id,
+        session.metadata.amount
+      );
     } catch (error) {
-      console.error('Error processing payment completion:', error);
-      // Don't send error response here, as Stripe will retry if we do
+      console.error("Error processing payment:", error);
     }
   }
+
+  res.status(200).send({ received: true });
+};
+
+// Update user balance in Firebase
+const handleSuccessfulPayment = async (userId, amount) => {
+  console.log(`Processing payment for user ${userId}, amount: $${amount}`);
   
-  // Return a 200 response to acknowledge receipt of the event
-  res.json({ received: true });
+  try {
+    // Get current user data
+    const userRef = db.ref(`users/${userId}`);
+    const userSnapshot = await userRef.once("value");
+    const user = userSnapshot.val();
+    
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+    
+    // Add the amount to the user's balance
+    const newBalance = (user.balance || 0) + parseFloat(amount);
+    
+    // Update the user's balance in Firebase
+    await userRef.update({ balance: newBalance });
+    
+    // Create a transaction record for this deposit
+    const transaction = {
+      id: Date.now().toString(),
+      userId,
+      type: "deposit",
+      amount: parseFloat(amount),
+      date: new Date().toISOString(),
+      description: "Added funds via Stripe",
+    };
+    
+    // Save the transaction in Firebase
+    await db.ref(`transactions/${userId}`).push(transaction);
+    
+    console.log(`Successfully updated balance for user ${userId} to $${newBalance}`);
+  } catch (error) {
+    console.error("Error updating user balance:", error);
+    throw error;
+  }
 };

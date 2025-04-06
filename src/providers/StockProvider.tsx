@@ -3,18 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import StockContext from '@/contexts/StockContext';
-import { mockStocks } from '@/data/mockStocks';
 import { Stock, Portfolio, Transaction } from '@/types/stock';
-import { 
-  updatePortfolioValues, 
-  updateStockPrices,
-  calculateUpdatedPortfolioWithNewStock,
-  calculateUpdatedPortfolioAfterSell
-} from '@/utils/stockUtils';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, updateUserBalance } = useAuth();
-  const [stocks, setStocks] = useState<Stock[]>(mockStocks);
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,59 +27,92 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadUserData = async () => {
     setIsLoading(true);
     try {
-      // Simulate API calls
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fetch stocks
+      const stocksResponse = await axios.get(`${API_URL}/stocks`);
       
-      // Load from localStorage if available (for demo)
-      const savedPortfolio = localStorage.getItem(`portfolio_${user?.id}`);
-      const savedTransactions = localStorage.getItem(`transactions_${user?.id}`);
+      // Format stock data from Firebase to match our frontend Stock type
+      const stockData = formatFirebaseStockData(stocksResponse.data);
+      setStocks(stockData);
       
-      if (savedPortfolio) {
-        setPortfolio(JSON.parse(savedPortfolio));
-      } else {
-        // Create empty portfolio
-        setPortfolio({
+      if (user) {
+        // Fetch portfolio
+        const portfolioResponse = await axios.get(`${API_URL}/portfolio/${user.id}`);
+        setPortfolio(portfolioResponse.data || {
           id: '1',
-          userId: user?.id || '',
+          userId: user.id,
           stocks: [],
           totalValue: 0,
           profitLoss: 0
         });
+        
+        // Fetch transactions
+        const transactionsResponse = await axios.get(`${API_URL}/transactions/${user.id}`);
+        // Firebase returns an object with transaction IDs as keys
+        const transactionsData = transactionsResponse.data;
+        
+        if (transactionsData) {
+          // Convert Firebase object format to array
+          const transactionsArray = Object.keys(transactionsData).map(key => ({
+            ...transactionsData[key],
+            firebaseId: key // Store the Firebase key
+          }));
+          setTransactions(transactionsArray);
+        } else {
+          setTransactions([]);
+        }
       }
-      
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions));
-      } else {
-        setTransactions([]);
-      }
-      
-      // Refresh stock data
-      refreshStockData();
     } catch (error) {
-      console.error('Error loading user data:', error);
-      toast.error('Failed to load portfolio data');
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Format Firebase stock data to match our frontend Stock type
+  const formatFirebaseStockData = (firebaseStocks: any): Stock[] => {
+    const formattedStocks: Stock[] = [];
+    
+    for (const symbol in firebaseStocks) {
+      const stockData = firebaseStocks[symbol];
+      
+      if (stockData.latest) {
+        const historicalData = stockData.history ? 
+          Object.entries(stockData.history).map(([date, price]) => ({
+            date,
+            price: Number(price)
+          })) : [];
+          
+        formattedStocks.push({
+          symbol,
+          name: stockData.name || symbol,
+          price: stockData.latest.price || 0,
+          change: stockData.latest.change || 0,
+          changePercent: stockData.latest.changePercent || 0,
+          marketCap: stockData.marketCap || 0,
+          historicalData,
+          prediction: stockData.prediction || { price: 0, confidence: 0 }
+        });
+      }
+    }
+    
+    return formattedStocks;
+  };
+
   const refreshStockData = async () => {
     try {
-      // Simulate API call for updated stock prices
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await axios.get(`${API_URL}/stocks`);
+      const stockData = formatFirebaseStockData(response.data);
+      setStocks(stockData);
       
-      // Update with slight variations to simulate real-time changes
-      const updatedStocks = updateStockPrices(stocks);
-      setStocks(updatedStocks);
-      
-      // Update portfolio values based on new prices
-      if (portfolio) {
-        const updatedPortfolio = updatePortfolioValues(portfolio, updatedStocks);
-        setPortfolio(updatedPortfolio);
-        localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
+      // If we have a portfolio, refresh portfolio data too
+      if (user && portfolio) {
+        const portfolioResponse = await axios.get(`${API_URL}/portfolio/${user.id}`);
+        setPortfolio(portfolioResponse.data);
       }
     } catch (error) {
       console.error('Error refreshing stock data:', error);
+      toast.error('Failed to refresh stock data');
     }
   };
 
@@ -96,53 +125,29 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       setIsLoading(true);
       
-      const stock = stocks.find(s => s.symbol === symbol);
-      if (!stock) {
-        throw new Error('Stock not found');
-      }
-      
-      const totalCost = stock.price * shares;
-      
-      // Check if user has enough balance
-      if (user.balance < totalCost) {
-        throw new Error('Insufficient funds');
-      }
-      
-      // Update user balance
-      const newBalance = user.balance - totalCost;
-      updateUserBalance(newBalance);
-      
-      // Create transaction
-      const transaction: Transaction = {
-        id: Date.now().toString(),
+      // Call the API to buy stock
+      const response = await axios.post(`${API_URL}/buy`, {
         userId: user.id,
         symbol,
-        type: 'buy',
-        shares,
-        price: stock.price,
-        total: parseFloat(totalCost.toFixed(2)),
-        date: new Date().toISOString()
-      };
+        shares
+      });
       
-      const updatedTransactions = [...transactions, transaction];
-      setTransactions(updatedTransactions);
-      localStorage.setItem(`transactions_${user.id}`, JSON.stringify(updatedTransactions));
+      // Update the user balance
+      updateUserBalance(response.data.newBalance);
       
-      // Update portfolio
-      const updatedPortfolio = calculateUpdatedPortfolioWithNewStock(
-        portfolio,
-        symbol,
-        shares,
-        stock.price,
-        user.id
-      );
+      // Update portfolio and transactions
+      setPortfolio(response.data.updatedPortfolio);
       
-      setPortfolio(updatedPortfolio);
-      localStorage.setItem(`portfolio_${user.id}`, JSON.stringify(updatedPortfolio));
+      // Add new transaction to the transactions list
+      setTransactions(prev => [...prev, response.data.updatedTransactions]);
       
       toast.success(`Successfully purchased ${shares} shares of ${symbol}`);
+      
+      // Refresh data
+      await loadUserData();
     } catch (error) {
-      toast.error((error as Error).message || 'Failed to buy stock');
+      console.error('Error buying stock:', error);
+      toast.error(error.response?.data?.error || 'Failed to buy stock');
     } finally {
       setIsLoading(false);
     }
@@ -157,56 +162,29 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       setIsLoading(true);
       
-      const stock = stocks.find(s => s.symbol === symbol);
-      if (!stock) {
-        throw new Error('Stock not found');
-      }
-      
-      const portfolioStock = portfolio.stocks.find(s => s.symbol === symbol);
-      if (!portfolioStock) {
-        throw new Error('You don\'t own this stock');
-      }
-      
-      if (portfolioStock.shares < shares) {
-        throw new Error('You don\'t have enough shares to sell');
-      }
-      
-      const saleValue = stock.price * shares;
-      
-      // Update user balance immediately in UI
-      const newBalance = user.balance + saleValue;
-      updateUserBalance(newBalance);
-      
-      // Create transaction
-      const transaction: Transaction = {
-        id: Date.now().toString(),
+      // Call the API to sell stock
+      const response = await axios.post(`${API_URL}/sell`, {
         userId: user.id,
         symbol,
-        type: 'sell',
-        shares,
-        price: stock.price,
-        total: parseFloat(saleValue.toFixed(2)),
-        date: new Date().toISOString()
-      };
+        shares
+      });
       
-      const updatedTransactions = [...transactions, transaction];
-      setTransactions(updatedTransactions);
-      localStorage.setItem(`transactions_${user.id}`, JSON.stringify(updatedTransactions));
+      // Update the user balance
+      updateUserBalance(response.data.newBalance);
       
-      // Update portfolio
-      const updatedPortfolio = calculateUpdatedPortfolioAfterSell(
-        portfolio,
-        symbol,
-        shares,
-        stock.price
-      );
+      // Update portfolio and transactions
+      setPortfolio(response.data.updatedPortfolio);
       
-      setPortfolio(updatedPortfolio);
-      localStorage.setItem(`portfolio_${user.id}`, JSON.stringify(updatedPortfolio));
+      // Add new transaction to the transactions list
+      setTransactions(prev => [...prev, response.data.updatedTransactions]);
       
       toast.success(`Successfully sold ${shares} shares of ${symbol}`);
+      
+      // Refresh data
+      await loadUserData();
     } catch (error) {
-      toast.error((error as Error).message || 'Failed to sell stock');
+      console.error('Error selling stock:', error);
+      toast.error(error.response?.data?.error || 'Failed to sell stock');
     } finally {
       setIsLoading(false);
     }

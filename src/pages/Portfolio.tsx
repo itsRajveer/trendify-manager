@@ -10,10 +10,25 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 const COLORS = ['#8B5CF6', '#10B981', '#EF4444', '#F97316', '#0EA5E9', '#D946EF'];
 
 const Portfolio = () => {
-  const { portfolio, stocks } = useStock();
+  const { portfolio, stocks, isLoading } = useStock();
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6 flex items-center">
+          <Briefcase className="h-5 w-5 mr-2" />
+          Loading Portfolio...
+        </h1>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   // No stocks in portfolio
-  if (!portfolio || portfolio.stocks.length === 0) {
+  if (!portfolio || !portfolio.stocks || portfolio.stocks.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-6 flex items-center">
@@ -39,7 +54,7 @@ const Portfolio = () => {
   // Format portfolio data for pie chart
   const pieData = portfolio.stocks.map((item, index) => ({
     name: item.symbol,
-    value: item.currentValue,
+    value: item.currentValue || (item.shares * (stocks.find(s => s.symbol === item.symbol)?.price || 0)),
     color: COLORS[index % COLORS.length]
   }));
 
@@ -108,7 +123,14 @@ const Portfolio = () => {
                     return (
                       <PortfolioStockCard
                         key={portfolioStock.symbol}
-                        stock={portfolioStock}
+                        stock={{
+                          symbol: portfolioStock.symbol,
+                          shares: portfolioStock.shares || 0,
+                          avgPrice: portfolioStock.price || 0,
+                          totalCost: portfolioStock.price * portfolioStock.shares,
+                          currentValue: (stockData?.price || 0) * (portfolioStock.shares || 0),
+                          profitLoss: ((stockData?.price || 0) - (portfolioStock.price || 0)) * (portfolioStock.shares || 0)
+                        }}
                         currentPrice={stockData?.price || 0}
                       />
                     );
@@ -129,32 +151,38 @@ const Portfolio = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[60vh] flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={150}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(240 10% 16%)', 
-                        borderColor: 'hsl(240 3.7% 15.9%)',
-                        color: '#fff' 
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {pieData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={150}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(240 10% 16%)', 
+                          borderColor: 'hsl(240 3.7% 15.9%)',
+                          color: '#fff' 
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    No data available for chart view
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

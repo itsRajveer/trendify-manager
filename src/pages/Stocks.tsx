@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStock, Stock } from "@/contexts/StockContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import StockChart from "@/components/StockChart";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const Stocks = () => {
-  const { stocks } = useStock();
+  const { stocks, isLoading } = useStock();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
@@ -34,6 +34,13 @@ const Stocks = () => {
     stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Set first stock as selected when stocks load
+  useEffect(() => {
+    if (stocks.length > 0 && !selectedStock) {
+      setSelectedStock(stocks[0]);
+    }
+  }, [stocks, selectedStock]);
+
   const handleSelectStock = (stock: Stock) => {
     setSelectedStock(stock);
   };
@@ -42,6 +49,14 @@ const Stocks = () => {
     setSelectedStock(stock);
     setBuyDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -223,7 +238,7 @@ const Stocks = () => {
                     <div className="flex items-center">
                       <span className="font-medium">${selectedStock.prediction.price.toFixed(2)}</span>
                       <span className="text-xs ml-2 text-muted-foreground">
-                        {selectedStock.prediction.confidence * 100}% confidence
+                        {(selectedStock.prediction.confidence * 100).toFixed(0)}% confidence
                       </span>
                     </div>
                   </div>
