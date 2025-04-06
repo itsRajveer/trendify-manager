@@ -72,11 +72,39 @@ const Dashboard = () => {
     setBuyDialogOpen(true);
   };
 
-  // Find best and worst performing stocks
-  const bestStock = stocks.length > 0 ? 
-    [...stocks].sort((a, b) => b.changePercent - a.changePercent)[0] : null;
-  const worstStock = stocks.length > 0 ? 
-    [...stocks].sort((a, b) => a.changePercent - b.changePercent)[0] : null;
+  // Find best and worst performing stocks based on gainLoss data when available
+  const findBestAndWorstStocks = () => {
+    // Use gainLoss data if available
+    if (Object.keys(stockGainLoss).length > 0 && stocks.length > 0) {
+      const stocksWithGainLoss = stocks.filter(stock => stockGainLoss[stock.symbol]);
+      
+      if (stocksWithGainLoss.length === 0) return { bestStock: null, worstStock: null };
+      
+      const sortedStocks = [...stocksWithGainLoss].sort((a, b) => {
+        const aPercent = parseFloat(stockGainLoss[a.symbol]?.percentChange || "0");
+        const bPercent = parseFloat(stockGainLoss[b.symbol]?.percentChange || "0");
+        return bPercent - aPercent;
+      });
+      
+      return {
+        bestStock: sortedStocks[0],
+        worstStock: sortedStocks[sortedStocks.length - 1]
+      };
+    }
+    
+    // Fallback to stock.changePercent
+    if (stocks.length === 0) {
+      return { bestStock: null, worstStock: null };
+    }
+    
+    const sortedByPerformance = [...stocks].sort((a, b) => b.changePercent - a.changePercent);
+    return {
+      bestStock: sortedByPerformance[0],
+      worstStock: sortedByPerformance[sortedByPerformance.length - 1]
+    };
+  };
+  
+  const { bestStock, worstStock } = findBestAndWorstStocks();
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -137,7 +165,7 @@ const Dashboard = () => {
       
       {/* Best and Worst Performing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {bestStock && (
+        {bestStock && bestStock !== worstStock && (
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center">
@@ -152,7 +180,9 @@ const Dashboard = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="text-2xl font-bold">${bestStock.price.toFixed(2)}</div>
                 <div className="text-success">
-                  +{bestStock.change.toFixed(2)} ({bestStock.changePercent.toFixed(2)}%)
+                  {stockGainLoss[bestStock.symbol] ? 
+                    `${stockGainLoss[bestStock.symbol].change >= "0" ? "+" : ""}${stockGainLoss[bestStock.symbol].change} (${stockGainLoss[bestStock.symbol].percentChange}%)` : 
+                    `+${bestStock.change.toFixed(2)} (${bestStock.changePercent.toFixed(2)}%)`}
                 </div>
               </div>
               <div className="h-40">
@@ -166,7 +196,7 @@ const Dashboard = () => {
           </Card>
         )}
         
-        {worstStock && (
+        {worstStock && bestStock !== worstStock && (
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center">
@@ -181,7 +211,9 @@ const Dashboard = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="text-2xl font-bold">${worstStock.price.toFixed(2)}</div>
                 <div className="text-danger">
-                  {worstStock.change.toFixed(2)} ({worstStock.changePercent.toFixed(2)}%)
+                  {stockGainLoss[worstStock.symbol] ?
+                    `${stockGainLoss[worstStock.symbol].change} (${stockGainLoss[worstStock.symbol].percentChange}%)` :
+                    `${worstStock.change.toFixed(2)} (${worstStock.changePercent.toFixed(2)}%)`}
                 </div>
               </div>
               <div className="h-40">
@@ -191,6 +223,45 @@ const Dashboard = () => {
                   gainLossInfo={stockGainLoss[worstStock.symbol]}
                 />
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {bestStock && bestStock === worstStock && (
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-2">
+              <div className="flex items-center">
+                <BarChart2 className="h-5 w-5 mr-2" />
+                <div>
+                  <CardDescription>Stock Performance</CardDescription>
+                  <CardTitle>{bestStock.symbol} · {bestStock.name}</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-2xl font-bold">${bestStock.price.toFixed(2)}</div>
+                <div className={bestStock.change >= 0 ? "text-success" : "text-danger"}>
+                  {stockGainLoss[bestStock.symbol] ? 
+                    `${stockGainLoss[bestStock.symbol].change >= "0" ? "+" : ""}${stockGainLoss[bestStock.symbol].change} (${stockGainLoss[bestStock.symbol].percentChange}%)` : 
+                    `${bestStock.change >= 0 ? "+" : ""}${bestStock.change.toFixed(2)} (${bestStock.changePercent.toFixed(2)}%)`}
+                </div>
+              </div>
+              <div className="h-40">
+                <StockChart 
+                  stock={bestStock} 
+                  height={160} 
+                  gainLossInfo={stockGainLoss[bestStock.symbol]}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!bestStock && !worstStock && (
+          <Card className="md:col-span-2">
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">No stock performance data available</p>
             </CardContent>
           </Card>
         )}

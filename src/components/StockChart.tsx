@@ -43,9 +43,18 @@ const StockChart = ({
   // Determine if the stock is trending up or down
   const positiveChange = gainLossInfo 
     ? gainLossInfo.direction === 'gain'
-    : (data.length >= 2 ? data[data.length - 1].price >= data[0].price : true);
+    : (data.length >= 2 ? data[data.length - 1]?.price >= data[0]?.price : true);
   
   const lineColor = color || (positiveChange ? "#10B981" : "#EF4444");
+
+  // Make sure we have valid data before rendering
+  if (data.length === 0) {
+    return (
+      <div className="flex justify-center items-center" style={{ height: height }}>
+        <p className="text-muted-foreground">No chart data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -74,7 +83,9 @@ const StockChart = ({
             />
           )}
           <Tooltip
-            formatter={(value: number) => [`$${value.toFixed(2)}`, 'Price']}
+            formatter={(value: number) => {
+              return isNaN(value) ? ["No data", "Price"] : [`$${value.toFixed(2)}`, 'Price'];
+            }}
             labelFormatter={(label) => `Date: ${label}`}
             contentStyle={{ 
               backgroundColor: 'hsl(240 10% 16%)', 

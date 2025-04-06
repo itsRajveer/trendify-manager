@@ -20,6 +20,15 @@ const StockCard = ({ stock, onClick, gainLossInfo }: StockCardProps) => {
     ? gainLossInfo.direction === 'gain'
     : stock.change >= 0;
 
+  // Make sure we have valid data before displaying
+  const changeValue = gainLossInfo 
+    ? gainLossInfo.change 
+    : stock.change.toFixed(2);
+    
+  const percentChangeValue = gainLossInfo 
+    ? gainLossInfo.percentChange
+    : stock.changePercent.toFixed(2);
+
   return (
     <Card 
       className={cn(
@@ -43,9 +52,7 @@ const StockCard = ({ stock, onClick, gainLossInfo }: StockCardProps) => {
             )}>
               {isPositive ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               <span>
-                {gainLossInfo 
-                  ? `${gainLossInfo.change} (${gainLossInfo.percentChange}%)`
-                  : `${stock.change.toFixed(2)} (${stock.changePercent.toFixed(2)}%)`}
+                {`${isPositive && !changeValue.startsWith("-") && !changeValue.startsWith("+") ? "+" : ""}${changeValue} (${percentChangeValue}%)`}
               </span>
             </div>
           </div>

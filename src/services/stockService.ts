@@ -6,10 +6,15 @@ const API_URL = 'http://localhost:5000/api';
 
 export const getHistoricalData = async (range: TimeRange): Promise<HistoricalDataResponse> => {
   const { from, to } = getDateRangeForQuery(range);
-  const response = await axios.get(
-    `${API_URL}/stocks/history?from=${from}&to=${to}`
-  );
-  return response.data;
+  try {
+    const response = await axios.get(
+      `${API_URL}/stocks/history?from=${from}&to=${to}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching historical data:", error);
+    return { history: {} };
+  }
 };
 
 const getDateRangeForQuery = (range: TimeRange): { from: string; to: string } => {
