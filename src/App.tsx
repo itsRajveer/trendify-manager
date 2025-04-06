@@ -12,6 +12,7 @@ import SignupPage from "./pages/Signup";
 import PortfolioPage from "./pages/Portfolio";
 import StocksPage from "./pages/Stocks";
 import TransactionsPage from "./pages/Transactions";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import RequireAuth from "./components/RequireAuth";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
@@ -29,6 +30,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/" element={<Layout />}>
                 <Route index element={
                   <RequireAuth>
