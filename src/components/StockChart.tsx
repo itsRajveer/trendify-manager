@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { Stock } from "@/types/stock";
 
 interface ChartDataPoint {
   date: string;
@@ -16,18 +17,23 @@ interface ChartDataPoint {
 }
 
 interface StockChartProps {
-  data: ChartDataPoint[];
+  data?: ChartDataPoint[];
+  stock?: Stock;
   height?: number;
   showAxis?: boolean;
   color?: string;
 }
 
 const StockChart = ({ 
-  data, 
+  data: propData, 
+  stock,
   height = 300, 
   showAxis = true,
   color = "#8B5CF6" 
 }: StockChartProps) => {
+  // Use stock.historicalData if stock is provided, otherwise use propData
+  const data = stock ? stock.historicalData : propData || [];
+  
   // Determine if the stock is trending up or down
   const positiveChange = data.length >= 2 ? 
     data[data.length - 1].price >= data[0].price : true;

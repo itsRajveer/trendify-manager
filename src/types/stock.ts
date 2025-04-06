@@ -21,7 +21,7 @@ export interface Portfolio {
 export interface PortfolioStock {
   symbol: string;
   shares: number;
-  price: number; // Added to match the backend property
+  price: number;
   avgPrice?: number;
   totalCost?: number;
   currentValue?: number;
