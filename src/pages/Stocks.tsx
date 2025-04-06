@@ -22,6 +22,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import StockHistoryChart from "@/components/StockHistoryChart";
+import { DashboardProvider } from "@/contexts/DashboardContext";
+import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
 
 const Stocks = () => {
   const { stocks, isLoading } = useStock();
@@ -76,6 +78,9 @@ const Stocks = () => {
           />
         </div>
       </div>
+
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-1">
@@ -211,7 +216,7 @@ const Stocks = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <StockHistoryChart symbol={selectedStock.symbol} name={selectedStock.name} />
+                <StockHistoryChart symbol={selectedStock.symbol} name={selectedStock.name} useGlobalTimeRange={true} />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                   <div>
@@ -271,4 +276,10 @@ const Stocks = () => {
   );
 };
 
-export default Stocks;
+const StocksWithProvider = () => (
+  <DashboardProvider>
+    <Stocks />
+  </DashboardProvider>
+);
+
+export default StocksWithProvider;

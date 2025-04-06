@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import PortfolioStockCard from "@/components/PortfolioStockCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { DashboardProvider } from "@/contexts/DashboardContext";
+import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
 
 const COLORS = ['#8B5CF6', '#10B981', '#EF4444', '#F97316', '#0EA5E9', '#D946EF'];
 
@@ -102,6 +104,9 @@ const Portfolio = () => {
         </Card>
       </div>
 
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
+
       <Tabs defaultValue="list" className="mt-6">
         <TabsList>
           <TabsTrigger value="list">List View</TabsTrigger>
@@ -194,4 +199,10 @@ const Portfolio = () => {
   );
 };
 
-export default Portfolio;
+const PortfolioWithProvider = () => (
+  <DashboardProvider>
+    <Portfolio />
+  </DashboardProvider>
+);
+
+export default PortfolioWithProvider;

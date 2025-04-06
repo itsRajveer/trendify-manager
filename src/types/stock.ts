@@ -59,15 +59,30 @@ export interface HistoricalDataPoint {
 }
 
 export interface HistoricalDataResponse {
-  [symbol: string]: {
-    [date: string]: {
-      close: number;
-      high: number;
-      low: number;
-      open: number;
-      volume: number;
+  history: {
+    [symbol: string]: {
+      [date: string]: {
+        close: number;
+        high: number;
+        low: number;
+        open: number;
+        volume: number;
+      }
     }
+  },
+  gainLoss?: {
+    [symbol: string]: StockGainLoss
   }
+}
+
+export interface StockGainLoss {
+  from: string;
+  to: string;
+  firstClose: number;
+  lastClose: number;
+  change: string;
+  percentChange: string;
+  direction: 'gain' | 'loss' | 'no change';
 }
 
 export type TimeRange = '7d' | '14d' | '1m' | '2m' | '3m';

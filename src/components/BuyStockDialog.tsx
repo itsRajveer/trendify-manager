@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Stock, useStock } from "@/contexts/StockContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import StockChart from "./StockChart";
+import { getHistoricalData } from "@/services/stockService";
+import { TimeRange } from "@/types/stock";
 
 interface BuyStockDialogProps {
   stock: Stock | null;
@@ -25,6 +27,33 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   const [shares, setShares] = useState<number>(1);
   const { buyStock } = useStock();
   const { user, updateUserBalance } = useAuth();
+  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
+  const [gainLossInfo, setGainLossInfo] = useState<{ 
+    change: string;
+    percentChange: string;
+    direction: 'gain' | 'loss' | 'no change';
+  } | null>(null);
+
+  useEffect(() => {
+    if (stock && isOpen) {
+      const fetchGainLossData = async () => {
+        try {
+          const data = await getHistoricalData(timeRange);
+          if (data.gainLoss && data.gainLoss[stock.symbol]) {
+            setGainLossInfo({
+              change: data.gainLoss[stock.symbol].change,
+              percentChange: data.gainLoss[stock.symbol].percentChange,
+              direction: data.gainLoss[stock.symbol].direction
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch gain/loss data:", error);
+        }
+      };
+
+      fetchGainLossData();
+    }
+  }, [stock, isOpen, timeRange]);
 
   if (!stock) return null;
 
@@ -51,7 +80,11 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
         </DialogHeader>
         
         <div className="py-2 h-40">
-          <StockChart stock={stock} height={160} />
+          <StockChart 
+            stock={stock} 
+            height={160}
+            gainLossInfo={gainLossInfo || undefined}
+          />
         </div>
         
         <div className="space-y-3 max-h-[50vh] overflow-y-auto py-2 pr-1">
@@ -80,6 +113,26 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
             <p className="text-sm text-danger">
               Insufficient funds for this purchase
             </p>
+          )}
+
+          {gainLossInfo && (
+            <div className="py-1">
+              <h4 className="text-sm font-medium mb-1">Performance</h4>
+              <div className={`p-2 rounded-md ${gainLossInfo.direction === 'gain' ? 'bg-green-100/10' : 'bg-red-100/10'}`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Change:</span>
+                  <span className={`font-semibold ${gainLossInfo.direction === 'gain' ? 'text-success' : 'text-danger'}`}>
+                    {gainLossInfo.direction === 'gain' ? '+' : ''}{gainLossInfo.change}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm">Percentage:</span>
+                  <span className={`font-semibold ${gainLossInfo.direction === 'gain' ? 'text-success' : 'text-danger'}`}>
+                    {gainLossInfo.direction === 'gain' ? '+' : ''}{gainLossInfo.percentChange}%
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
           
           <div className="py-1">

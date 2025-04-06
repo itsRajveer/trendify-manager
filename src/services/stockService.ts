@@ -50,13 +50,29 @@ export const processHistoricalDataForCharts = (
   data: HistoricalDataResponse,
   symbol: string
 ): { date: string; price: number }[] => {
-  if (!data || !data[symbol]) return [];
+  if (!data || !data.history || !data.history[symbol]) return [];
 
-  const symbolData = data[symbol];
+  const symbolData = data.history[symbol];
   return Object.entries(symbolData)
     .map(([date, values]) => ({
       date,
       price: values.close,
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
+export const processGainLossData = (data: HistoricalDataResponse): {
+  symbol: string;
+  change: string;
+  percentChange: string;
+  direction: 'gain' | 'loss' | 'no change';
+}[] => {
+  if (!data || !data.gainLoss) return [];
+
+  return Object.entries(data.gainLoss).map(([symbol, gainLoss]) => ({
+    symbol,
+    change: gainLoss.change,
+    percentChange: gainLoss.percentChange,
+    direction: gainLoss.direction,
+  }));
 };

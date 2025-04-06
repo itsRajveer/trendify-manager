@@ -1,65 +1,49 @@
 
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import StockProvider from './providers/StockProvider';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import StockProvider from "@/providers/StockProvider";
-import Dashboard from "./pages/Dashboard";
-import LoginPage from "./pages/Login";
-import SignupPage from "./pages/Signup";
-import PortfolioPage from "./pages/Portfolio";
-import StocksPage from "./pages/Stocks";
-import TransactionsPage from "./pages/Transactions";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import RequireAuth from "./components/RequireAuth";
-import Layout from "./components/Layout";
-import NotFound from "./pages/NotFound";
+import { Toaster as SonnerToaster } from 'sonner';
+import RequireAuth from './components/RequireAuth';
+import Layout from './components/Layout';
+import Index from './pages/Index';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import Portfolio from './pages/Portfolio';
+import Stocks from './pages/Stocks';
+import Transactions from './pages/Transactions';
+import NotFound from './pages/NotFound';
+import PaymentSuccess from './pages/PaymentSuccess';
+import './App.css';
+import { DashboardProvider } from './contexts/DashboardContext';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <StockProvider>
-          <Toaster />
-          <Sonner />
+function App() {
+  return (
+    <AuthProvider>
+      <StockProvider>
+        <DashboardProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/" element={<Layout />}>
-                <Route index element={
-                  <RequireAuth>
-                    <Dashboard />
-                  </RequireAuth>
-                } />
-                <Route path="portfolio" element={
-                  <RequireAuth>
-                    <PortfolioPage />
-                  </RequireAuth>
-                } />
-                <Route path="stocks" element={
-                  <RequireAuth>
-                    <StocksPage />
-                  </RequireAuth>
-                } />
-                <Route path="transactions" element={
-                  <RequireAuth>
-                    <TransactionsPage />
-                  </RequireAuth>
-                } />
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/portfolio" element={<RequireAuth><Portfolio /></RequireAuth>} />
+                <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
+                <Route path="/transactions" element={<RequireAuth><Transactions /></RequireAuth>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </StockProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          <Toaster />
+          <SonnerToaster position="top-right" />
+        </DashboardProvider>
+      </StockProvider>
+    </AuthProvider>
+  );
+}
 
 export default App;

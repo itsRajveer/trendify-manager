@@ -8,12 +8,23 @@ import StockCard from "@/components/StockCard";
 import BuyStockDialog from "@/components/BuyStockDialog";
 import { BarChart2, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DashboardProvider } from "@/contexts/DashboardContext";
+import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
+import { useDashboard } from "@/contexts/DashboardContext";
+import { getHistoricalData } from "@/services/stockService";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { stocks, portfolio, refreshStockData } = useStock();
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+  const [stockGainLoss, setStockGainLoss] = useState<Record<string, {
+    change: string;
+    percentChange: string;
+    direction: 'gain' | 'loss' | 'no change';
+  }>>({});
+  
+  const { globalTimeRange } = useDashboard();
 
   useEffect(() => {
     // Refresh stock data when dashboard loads
@@ -26,6 +37,35 @@ const Dashboard = () => {
     
     return () => clearInterval(interval);
   }, [refreshStockData]);
+
+  useEffect(() => {
+    const fetchGainLossData = async () => {
+      try {
+        const data = await getHistoricalData(globalTimeRange);
+        if (data.gainLoss) {
+          const gainLossInfo: Record<string, {
+            change: string;
+            percentChange: string;
+            direction: 'gain' | 'loss' | 'no change';
+          }> = {};
+
+          Object.entries(data.gainLoss).forEach(([symbol, info]) => {
+            gainLossInfo[symbol] = {
+              change: info.change,
+              percentChange: info.percentChange,
+              direction: info.direction
+            };
+          });
+
+          setStockGainLoss(gainLossInfo);
+        }
+      } catch (error) {
+        console.error("Failed to fetch gain/loss data:", error);
+      }
+    };
+
+    fetchGainLossData();
+  }, [globalTimeRange]);
 
   const openBuyDialog = (stock: Stock) => {
     setSelectedStock(stock);
@@ -86,6 +126,9 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
+
       {/* Market Overview */}
       <h2 className="text-xl font-semibold mb-4 flex items-center">
         <BarChart2 className="h-5 w-5 mr-2" />
@@ -113,7 +156,11 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="h-40">
-                <StockChart stock={bestStock} height={160} />
+                <StockChart 
+                  stock={bestStock} 
+                  height={160} 
+                  gainLossInfo={stockGainLoss[bestStock.symbol]}
+                />
               </div>
             </CardContent>
           </Card>
@@ -138,7 +185,11 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="h-40">
-                <StockChart stock={worstStock} height={160} />
+                <StockChart 
+                  stock={worstStock} 
+                  height={160} 
+                  gainLossInfo={stockGainLoss[worstStock.symbol]}
+                />
               </div>
             </CardContent>
           </Card>
@@ -153,6 +204,7 @@ const Dashboard = () => {
             key={stock.symbol} 
             stock={stock} 
             onClick={() => openBuyDialog(stock)}
+            gainLossInfo={stockGainLoss[stock.symbol]}
           />
         ))}
       </div>
@@ -167,4 +219,10 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+const DashboardWithProvider = () => (
+  <DashboardProvider>
+    <Dashboard />
+  </DashboardProvider>
+);
+
+export default DashboardWithProvider;
