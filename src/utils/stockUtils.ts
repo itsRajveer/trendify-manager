@@ -1,3 +1,4 @@
+
 import { Stock, Portfolio, PortfolioStock } from "../types/stock";
 
 export const updatePortfolioValues = (portfolio: Portfolio, currentStocks: Stock[]): Portfolio => {

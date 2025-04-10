@@ -91,6 +91,39 @@ const Dashboard = () => {
   };
   
   const { bestStock, worstStock } = findBestAndWorstStocks();
+  // Find best and worst performing stocks based on gainLoss data when available
+  const findBestAndWorstStocks = () => {
+    // Use gainLoss data if available
+    if (Object.keys(stockGainLoss).length > 0 && stocks.length > 0) {
+      const stocksWithGainLoss = stocks.filter(stock => stockGainLoss[stock.symbol]);
+      
+      if (stocksWithGainLoss.length === 0) return { bestStock: null, worstStock: null };
+      
+      const sortedStocks = [...stocksWithGainLoss].sort((a, b) => {
+        const aPercent = parseFloat(stockGainLoss[a.symbol]?.percentChange || "0");
+        const bPercent = parseFloat(stockGainLoss[b.symbol]?.percentChange || "0");
+        return bPercent - aPercent;
+      });
+      
+      return {
+        bestStock: sortedStocks[0],
+        worstStock: sortedStocks[sortedStocks.length - 1]
+      };
+    }
+    
+    // Fallback to stock.changePercent
+    if (stocks.length === 0) {
+      return { bestStock: null, worstStock: null };
+    }
+    
+    const sortedByPerformance = [...stocks].sort((a, b) => b.changePercent - a.changePercent);
+    return {
+      bestStock: sortedByPerformance[0],
+      worstStock: sortedByPerformance[sortedByPerformance.length - 1]
+    };
+  };
+  
+  const { bestStock, worstStock } = findBestAndWorstStocks();
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -139,6 +172,9 @@ const Dashboard = () => {
           </CardHeader>
         </Card>
       </div>
+
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
 
       {/* Global Time Range Selector */}
       <GlobalTimeRangeSelector />
@@ -277,6 +313,13 @@ const Dashboard = () => {
   );
 };
 
+const DashboardWithProvider = () => (
+  <DashboardProvider>
+    <Dashboard />
+  </DashboardProvider>
+);
+
+export default DashboardWithProvider;
 const DashboardWithProvider = () => (
   <DashboardProvider>
     <Dashboard />

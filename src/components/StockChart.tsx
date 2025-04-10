@@ -14,8 +14,16 @@ interface ChartDataPoint {
   date: string;
   price: number;
 }
+import { Stock } from "@/types/stock";
+
+interface ChartDataPoint {
+  date: string;
+  price: number;
+}
 
 interface StockChartProps {
+  data?: ChartDataPoint[];
+  stock?: Stock;
   data?: ChartDataPoint[];
   stock?: Stock;
   height?: number;
@@ -26,13 +34,22 @@ interface StockChartProps {
     percentChange: string;
     direction: 'gain' | 'loss' | 'no change';
   };
+  gainLossInfo?: {
+    change: string;
+    percentChange: string;
+    direction: 'gain' | 'loss' | 'no change';
+  };
 }
 
 const StockChart = ({ 
   data: propData, 
   stock,
+  data: propData, 
+  stock,
   height = 300, 
   showAxis = true,
+  color = "#8B5CF6",
+  gainLossInfo
   color = "#8B5CF6",
   gainLossInfo
 }: StockChartProps) => {

@@ -13,8 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import StockChart from "./StockChart";
-import { getHistoricalData, processHistoricalDataForCharts } from "../service/stockService";
-import { TimeRange } from "@/types/stock";
 
 interface BuyStockDialogProps {
   stock: Stock | null;
@@ -26,42 +24,6 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   const [shares, setShares] = useState<number>(1);
   const { buyStock } = useStock();
   const { user, updateUserBalance } = useAuth();
-  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
-  const [gainLossInfo, setGainLossInfo] = useState<{ 
-    change: string;
-    percentChange: string;
-    direction: 'gain' | 'loss' | 'no change';
-  } | null>(null);
-  const [historicalData, setHistoricalData] = useState<{ date: string; price: number }[]>([]);
-
-  useEffect(() => {
-    if (stock && isOpen) {
-      const fetchData = async () => {
-        try {
-          const data = await getHistoricalData(timeRange);
-          
-          // Process historical data
-          if (data.history && data.history[stock.symbol]) {
-            const processedData = processHistoricalDataForCharts(data, stock.symbol);
-            setHistoricalData(processedData);
-          }
-          
-          // Set gain/loss information
-          if (data.gainLoss && data.gainLoss[stock.symbol]) {
-            setGainLossInfo({
-              change: data.gainLoss[stock.symbol].change,
-              percentChange: data.gainLoss[stock.symbol].percentChange,
-              direction: data.gainLoss[stock.symbol].direction
-            });
-          }
-        } catch (error) {
-          console.error("Failed to fetch data:", error);
-        }
-      };
-
-      fetchData();
-    }
-  }, [stock, isOpen, timeRange]);
 
   if (!stock) return null;
 
@@ -92,11 +54,7 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
         </DialogHeader>
         
         <div className="py-2 h-40">
-          <StockChart 
-            data={historicalData}
-            height={160}
-            gainLossInfo={gainLossInfo || undefined}
-          />
+          <StockChart stock={stock} height={160} />
         </div>
         
         <div className="space-y-3 max-h-[50vh] overflow-y-auto py-2 pr-1">

@@ -26,7 +26,7 @@ interface AddFundsDialogProps {
 }
 
 const AddFundsDialog = ({ open, onOpenChange }: AddFundsDialogProps) => {
-  const { addToBalance } = useAuth();
+  const { user, addToBalance } = useAuth();
   const [amount, setAmount] = useState<number>(PRESET_AMOUNTS[0]);
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,19 +54,52 @@ const AddFundsDialog = ({ open, onOpenChange }: AddFundsDialogProps) => {
         throw new Error('Stripe failed to load');
       }
 
-      // In a real application, you would:
-      // 1. Call your backend to create a Stripe Checkout Session
-      // 2. Redirect to Stripe Checkout
-      // 3. Handle the success/cancel redirects
-      // 
-      // For this demo, we'll simulate the payment:
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Add the amount to user's balance
-      addToBalance(amount);
-      
-      toast.success(`Successfully added $${amount.toFixed(2)} to your balance!`);
-      onOpenChange(false);
+      // Get token from local storage for authorization
+      const token = localStorage.getItem('token');
+      if (!token && user) {
+        throw new Error('Authentication token not found');
+      }
+
+      // Call your backend API to create a checkout session
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/payment/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token || '',
+        },
+        body: JSON.stringify({
+          amount: amount,
+          userId: user?.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const session = await response.json();
+
+      // If we're in development mode, simulate the payment
+      if (process.env.NODE_ENV === 'development' && !process.env.REACT_APP_USE_REAL_STRIPE) {
+        // Simulate successful payment
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Add the amount to user's balance
+        addToBalance(amount);
+        
+        toast.success(`Successfully added $${amount.toFixed(2)} to your balance!`);
+        onOpenChange(false);
+      } else {
+        // Redirect to Stripe checkout
+        const result = await stripe.redirectToCheckout({
+          sessionId: session.id
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to redirect to checkout');
+        }
+      }
     } catch (error) {
       toast.error("Payment failed. Please try again.");
       console.error('Payment error:', error);

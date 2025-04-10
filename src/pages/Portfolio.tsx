@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { DashboardProvider } from "@/contexts/DashboardContext";
 import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
+import { DashboardProvider } from "@/contexts/DashboardContext";
+import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
 
 const COLORS = ['#8B5CF6', '#10B981', '#EF4444', '#F97316', '#0EA5E9', '#D946EF'];
 
@@ -28,8 +30,25 @@ const Portfolio = () => {
       </div>
     );
   }
+  const { portfolio, stocks, isLoading } = useStock();
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6 flex items-center">
+          <Briefcase className="h-5 w-5 mr-2" />
+          Loading Portfolio...
+        </h1>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   // No stocks in portfolio
+  if (!portfolio || !portfolio.stocks || portfolio.stocks.length === 0) {
   if (!portfolio || !portfolio.stocks || portfolio.stocks.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -56,6 +75,7 @@ const Portfolio = () => {
   // Format portfolio data for pie chart
   const pieData = portfolio.stocks.map((item, index) => ({
     name: item.symbol,
+    value: item.currentValue || (item.shares * (stocks.find(s => s.symbol === item.symbol)?.price || 0)),
     value: item.currentValue || (item.shares * (stocks.find(s => s.symbol === item.symbol)?.price || 0)),
     color: COLORS[index % COLORS.length]
   }));
@@ -106,6 +126,9 @@ const Portfolio = () => {
       {/* Global Time Range Selector */}
       <GlobalTimeRangeSelector />
 
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
+
       <Tabs defaultValue="list" className="mt-6">
         <TabsList>
           <TabsTrigger value="list">List View</TabsTrigger>
@@ -128,6 +151,15 @@ const Portfolio = () => {
                     return (
                       <PortfolioStockCard
                         key={portfolioStock.symbol}
+                        stock={{
+                          symbol: portfolioStock.symbol,
+                          shares: portfolioStock.shares || 0,
+                          price: portfolioStock.price || 0,
+                          avgPrice: portfolioStock.avgPrice || portfolioStock.price || 0,
+                          totalCost: (portfolioStock.price || 0) * (portfolioStock.shares || 0),
+                          currentValue: (stockData?.price || 0) * (portfolioStock.shares || 0),
+                          profitLoss: ((stockData?.price || 0) - (portfolioStock.price || 0)) * (portfolioStock.shares || 0)
+                        }}
                         stock={{
                           symbol: portfolioStock.symbol,
                           shares: portfolioStock.shares || 0,
@@ -189,6 +221,38 @@ const Portfolio = () => {
                     No data available for chart view
                   </div>
                 )}
+                {pieData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={150}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(240 10% 16%)', 
+                          borderColor: 'hsl(240 3.7% 15.9%)',
+                          color: '#fff' 
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    No data available for chart view
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -198,6 +262,13 @@ const Portfolio = () => {
   );
 };
 
+const PortfolioWithProvider = () => (
+  <DashboardProvider>
+    <Portfolio />
+  </DashboardProvider>
+);
+
+export default PortfolioWithProvider;
 const PortfolioWithProvider = () => (
   <DashboardProvider>
     <Portfolio />
