@@ -15,8 +15,22 @@ interface StockCardProps {
   historicalData?: { date: string; price: number }[];
 }
 
-const StockCard = ({ stock, onClick }: StockCardProps) => {
-  const isPositive = stock.change >= 0;
+const StockCard = ({ stock, onClick, gainLossInfo, historicalData }: StockCardProps) => {
+  const isPositive = gainLossInfo
+    ? gainLossInfo.direction === 'gain'
+    : stock.change >= 0;
+
+  console.log("StockCard - stock:", stock);
+  console.log("StockCard - historicalData:", historicalData);
+
+  // Make sure we have valid data before displaying
+  const changeValue = gainLossInfo 
+    ? gainLossInfo.change 
+    : stock.change.toFixed(2);
+    
+  const percentChangeValue = gainLossInfo 
+    ? gainLossInfo.percentChange
+    : stock.changePercent.toFixed(2);
 
   return (
     <Card 
@@ -47,7 +61,13 @@ const StockCard = ({ stock, onClick }: StockCardProps) => {
           </div>
         </div>
         <div className="h-24">
-          <StockChart stock={stock} height={100} showAxis={false} color={isPositive ? "#10B981" : "#EF4444"} />
+          <StockChart 
+            data={historicalData}
+            height={100} 
+            showAxis={false} 
+            color={isPositive ? "#10B981" : "#EF4444"}
+            gainLossInfo={gainLossInfo}
+          />
         </div>
       </CardContent>
     </Card>

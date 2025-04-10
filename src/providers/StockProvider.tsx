@@ -11,7 +11,6 @@ const API_URL = 'http://localhost:5000/api';
 export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, updateUserBalance } = useAuth();
   const [stocks, setStocks] = useState<Stock[]>([]);
-  const [stocks, setStocks] = useState<Stock[]>([]);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,8 +35,6 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       // Fetch stocks
       const stocksResponse = await axios.get(`${API_URL}/stocks`);
-      // Fetch stocks
-      const stocksResponse = await axios.get(`${API_URL}/stocks`);
       
       // Format stock data from Firebase to match our frontend Stock type
       const stockData = await formatFirebaseStockData(stocksResponse.data);
@@ -47,12 +44,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Fetch portfolio
         const portfolioResponse = await axios.get(`${API_URL}/portfolio/${user.id}`);
         setPortfolio(portfolioResponse.data || {
-      if (user) {
-        // Fetch portfolio
-        const portfolioResponse = await axios.get(`${API_URL}/portfolio/${user.id}`);
-        setPortfolio(portfolioResponse.data || {
           id: '1',
-          userId: user.id,
           userId: user.id,
           stocks: [],
           totalValue: 0,
@@ -74,8 +66,6 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data');
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
     } finally {
@@ -330,8 +320,6 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Call the API to sell stock
       const response = await axios.post(`${API_URL}/sell`, {
-      // Call the API to sell stock
-      const response = await axios.post(`${API_URL}/sell`, {
         userId: user.id,
         symbol,
         shares
@@ -339,17 +327,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Update the user balance
       updateUserBalance(response.data.newBalance);
-        shares
-      });
       
-      // Update the user balance
-      updateUserBalance(response.data.newBalance);
-      
-      // Update portfolio and transactions
-      setPortfolio(response.data.updatedPortfolio);
-      
-      // Add new transaction to the transactions list
-      setTransactions(prev => [...prev, response.data.updatedTransactions]);
       // Update portfolio and transactions
       setPortfolio(response.data.updatedPortfolio);
       
@@ -360,12 +338,7 @@ export const StockProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Refresh data
       await loadUserData();
-      
-      // Refresh data
-      await loadUserData();
     } catch (error) {
-      console.error('Error selling stock:', error);
-      toast.error(error.response?.data?.error || 'Failed to sell stock');
       console.error('Error selling stock:', error);
       toast.error(error.response?.data?.error || 'Failed to sell stock');
     } finally {

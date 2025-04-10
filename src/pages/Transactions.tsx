@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStock } from "@/contexts/StockContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import {
@@ -15,11 +14,8 @@ import {
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
-import axios from "axios";
 
 const Transactions = () => {
-  const { user } = useAuth();
-  const { transactions, isLoading } = useStock();
   const { user } = useAuth();
   const { transactions, isLoading } = useStock();
 
@@ -37,20 +33,6 @@ const Transactions = () => {
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
-
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 flex items-center">
-          <Clock className="h-5 w-5 mr-2" />
-          Loading Transactions...
-        </h1>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
