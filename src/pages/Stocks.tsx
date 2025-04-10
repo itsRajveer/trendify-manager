@@ -240,8 +240,8 @@ const Stocks = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Market Cap</h3>
-                    <p>${(selectedStock.marketCap / 1000000000).toFixed(2)}B</p>
+                    {/* <h3 className="text-sm font-medium mb-2">Market Cap</h3>
+                    <p>${(selectedStock.marketCap / 1000000000).toFixed(2)}B</p> */}
                   </div>
                   
                   <div>
