@@ -71,6 +71,7 @@ export const calculateUpdatedPortfolioWithNewStock = (
     updatedPortfolioStocks.push({
       symbol,
       shares,
+      price: price,
       avgPrice: price,
       totalCost: parseFloat(totalCost.toFixed(2)),
       currentValue: parseFloat(totalCost.toFixed(2)),

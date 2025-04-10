@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DashboardProvider } from "./contexts/DashboardContext";
 import StockProvider from "@/providers/StockProvider";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/Login";
@@ -25,35 +26,37 @@ const App = () => (
         <StockProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/" element={<Layout />}>
-                <Route index element={
-                  <RequireAuth>
-                    <Dashboard />
-                  </RequireAuth>
-                } />
-                <Route path="portfolio" element={
-                  <RequireAuth>
-                    <PortfolioPage />
-                  </RequireAuth>
-                } />
-                <Route path="stocks" element={
-                  <RequireAuth>
-                    <StocksPage />
-                  </RequireAuth>
-                } />
-                <Route path="transactions" element={
-                  <RequireAuth>
-                    <TransactionsPage />
-                  </RequireAuth>
-                } />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <DashboardProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/" element={<Layout />}>
+                  <Route index element={
+                    <RequireAuth>
+                      <Dashboard />
+                    </RequireAuth>
+                  } />
+                  <Route path="portfolio" element={
+                    <RequireAuth>
+                      <PortfolioPage />
+                    </RequireAuth>
+                  } />
+                  <Route path="stocks" element={
+                    <RequireAuth>
+                      <StocksPage />
+                    </RequireAuth>
+                  } />
+                  <Route path="transactions" element={
+                    <RequireAuth>
+                      <TransactionsPage />
+                    </RequireAuth>
+                  } />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </DashboardProvider>
         </StockProvider>
       </AuthProvider>
     </TooltipProvider>

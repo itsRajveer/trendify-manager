@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("demo@gmail.com");
+  const [password, setPassword] = useState("demo123");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -82,9 +82,9 @@ const LoginPage = () => {
           </form>
         </Card>
         
-        <div className="mt-8 text-center text-sm text-muted-foreground">
+        {/* <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>Demo credentials are prefilled. Just click Sign in.</p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

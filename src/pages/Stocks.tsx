@@ -1,8 +1,6 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStock, Stock } from "@/contexts/StockContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import StockChart from "@/components/StockChart";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Search, Info } from "lucide-react";
@@ -22,9 +20,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import StockHistoryChart from "@/components/StockHistoryChart";
+import { DashboardProvider } from "@/contexts/DashboardContext";
+import GlobalTimeRangeSelector from "@/components/GlobalTimeRangeSelector";
+import { getHistoricalData } from "@/service/stockService";
+import { cn } from "@/lib/utils";
 
 const Stocks = () => {
-  const { stocks } = useStock();
+  const { stocks, isLoading, stockGainLoss } = useStock();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
@@ -34,6 +37,13 @@ const Stocks = () => {
     stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Set first stock as selected when stocks load
+  useEffect(() => {
+    if (stocks.length > 0 && !selectedStock) {
+      setSelectedStock(stocks[0]);
+    }
+  }, [stocks, selectedStock]);
+
   const handleSelectStock = (stock: Stock) => {
     setSelectedStock(stock);
   };
@@ -42,6 +52,14 @@ const Stocks = () => {
     setSelectedStock(stock);
     setBuyDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -61,6 +79,9 @@ const Stocks = () => {
           />
         </div>
       </div>
+
+      {/* Global Time Range Selector */}
+      <GlobalTimeRangeSelector />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-1">
@@ -84,7 +105,7 @@ const Stocks = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Symbol</TableHead>
+                          <TableHead className="w-[120px]">Symbol</TableHead>
                           <TableHead className="text-right">Price</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -95,14 +116,16 @@ const Stocks = () => {
                             className={selectedStock?.symbol === stock.symbol ? "bg-muted cursor-pointer" : "cursor-pointer"}
                             onClick={() => handleSelectStock(stock)}
                           >
-                            <TableCell>{stock.symbol}</TableCell>
+                            <TableCell className="font-medium">{stock.symbol}</TableCell>
                             <TableCell className="text-right">
-                              <div className="flex items-center justify-end">
+                              <div className="flex items-center justify-end gap-2">
                                 <span>${stock.price.toFixed(2)}</span>
                                 <span 
-                                  className={`ml-2 text-xs ${stock.change >= 0 ? "text-success" : "text-danger"}`}
+                                  className={`text-xs ${stockGainLoss[stock.symbol]?.direction === 'gain' ? "text-success" : "text-danger"}`}
                                 >
-                                  {stock.change >= 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%
+                                  {stockGainLoss[stock.symbol] ? 
+                                    `${stockGainLoss[stock.symbol].change >= "0" ? "+" : ""}${stockGainLoss[stock.symbol].change} (${stockGainLoss[stock.symbol].percentChange}%)` : 
+                                    `${stock.change >= 0 ? "+" : ""}${stock.change.toFixed(2)} (${stock.changePercent.toFixed(2)}%)`}
                                 </span>
                               </div>
                             </TableCell>
@@ -118,13 +141,19 @@ const Stocks = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Symbol</TableHead>
+                          <TableHead className="w-[120px]">Symbol</TableHead>
                           <TableHead className="text-right">Change</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {[...filteredStocks]
-                          .sort((a, b) => b.changePercent - a.changePercent)
+                          .sort((a, b) => {
+                            const aChange = stockGainLoss[a.symbol]?.percentChange ? 
+                              parseFloat(stockGainLoss[a.symbol].percentChange) : a.changePercent;
+                            const bChange = stockGainLoss[b.symbol]?.percentChange ? 
+                              parseFloat(stockGainLoss[b.symbol].percentChange) : b.changePercent;
+                            return bChange - aChange;
+                          })
                           .slice(0, 5)
                           .map((stock) => (
                             <TableRow 
@@ -132,9 +161,11 @@ const Stocks = () => {
                               className={selectedStock?.symbol === stock.symbol ? "bg-muted cursor-pointer" : "cursor-pointer"}
                               onClick={() => handleSelectStock(stock)}
                             >
-                              <TableCell>{stock.symbol}</TableCell>
+                              <TableCell className="font-medium">{stock.symbol}</TableCell>
                               <TableCell className="text-right text-success">
-                                +{stock.changePercent.toFixed(2)}%
+                                {stockGainLoss[stock.symbol] ? 
+                                  `+${stockGainLoss[stock.symbol].change} (${stockGainLoss[stock.symbol].percentChange}%)` :
+                                  `+${stock.changePercent.toFixed(2)}%`}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -148,13 +179,19 @@ const Stocks = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Symbol</TableHead>
+                          <TableHead className="w-[120px]">Symbol</TableHead>
                           <TableHead className="text-right">Change</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {[...filteredStocks]
-                          .sort((a, b) => a.changePercent - b.changePercent)
+                          .sort((a, b) => {
+                            const aChange = stockGainLoss[a.symbol]?.percentChange ? 
+                              parseFloat(stockGainLoss[a.symbol].percentChange) : a.changePercent;
+                            const bChange = stockGainLoss[b.symbol]?.percentChange ? 
+                              parseFloat(stockGainLoss[b.symbol].percentChange) : b.changePercent;
+                            return aChange - bChange;
+                          })
                           .slice(0, 5)
                           .map((stock) => (
                             <TableRow 
@@ -162,9 +199,11 @@ const Stocks = () => {
                               className={selectedStock?.symbol === stock.symbol ? "bg-muted cursor-pointer" : "cursor-pointer"}
                               onClick={() => handleSelectStock(stock)}
                             >
-                              <TableCell>{stock.symbol}</TableCell>
+                              <TableCell className="font-medium">{stock.symbol}</TableCell>
                               <TableCell className="text-right text-danger">
-                                {stock.changePercent.toFixed(2)}%
+                                {stockGainLoss[stock.symbol] ? 
+                                  `${stockGainLoss[stock.symbol].change} (${stockGainLoss[stock.symbol].percentChange}%)` :
+                                  `${stock.changePercent.toFixed(2)}%`}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -188,67 +227,101 @@ const Stocks = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold">${selectedStock.price.toFixed(2)}</div>
-                    <div className={selectedStock.change >= 0 ? "text-success" : "text-danger"}>
-                      {selectedStock.change >= 0 ? "+" : ""}
-                      {selectedStock.change.toFixed(2)} ({selectedStock.changePercent.toFixed(2)}%)
+                    <div className={stockGainLoss[selectedStock.symbol]?.direction === 'gain' ? "text-success" : "text-danger"}>
+                      {stockGainLoss[selectedStock.symbol] ? 
+                        `${stockGainLoss[selectedStock.symbol].change >= "0" ? "+" : ""}${stockGainLoss[selectedStock.symbol].change} (${stockGainLoss[selectedStock.symbol].percentChange}%)` : 
+                        `${selectedStock.change >= 0 ? "+" : ""}${selectedStock.change.toFixed(2)} (${selectedStock.changePercent.toFixed(2)}%)`}
                     </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-64 mb-6">
-                  <StockChart stock={selectedStock} />
-                </div>
+                <StockHistoryChart symbol={selectedStock.symbol} name={selectedStock.name} useGlobalTimeRange={true} />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Market Cap</h3>
-                    <p>${(selectedStock.marketCap / 1000000000).toFixed(2)}B</p>
+                    {/* <h3 className="text-sm font-medium mb-2">Market Cap</h3>
+                    <p>${(selectedStock.marketCap / 1000000000).toFixed(2)}B</p> */}
                   </div>
                   
                   <div>
                     <h3 className="text-sm font-medium mb-2 flex items-center">
-                      Price Prediction
+                      Price Prediction (7 Days)
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 ml-1 text-muted-foreground" />
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 ml-2 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>AI-powered prediction based on historical data</p>
+                            <p>Predicted price based on historical data and market trends using machine learning</p>
+                            <p className="text-xs mt-1">Confidence score considers price stability and historical patterns</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </h3>
-                    <div className="flex items-center">
-                      <span className="font-medium">${selectedStock.prediction.price.toFixed(2)}</span>
-                      <span className="text-xs ml-2 text-muted-foreground">
-                        {selectedStock.prediction.confidence * 100}% confidence
-                      </span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-semibold">
+                          ${selectedStock.prediction.price.toFixed(2)}
+                        </p>
+                        <div className={cn(
+                          "text-sm px-2 py-1 rounded",
+                          selectedStock.prediction.trend === 'up' ? "bg-success/10 text-success" :
+                          selectedStock.prediction.trend === 'down' ? "bg-danger/10 text-danger" :
+                          "bg-muted text-muted-foreground"
+                        )}>
+                          {selectedStock.prediction.trend === 'up' ? '↑ Upward' :
+                           selectedStock.prediction.trend === 'down' ? '↓ Downward' :
+                           '→ Neutral'}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className={cn(
+                          "text-sm",
+                          selectedStock.prediction.price > selectedStock.price ? "text-success" : "text-danger"
+                        )}>
+                          {selectedStock.prediction.price > selectedStock.price ? "+" : ""}
+                          {((selectedStock.prediction.price - selectedStock.price) / selectedStock.price * 100).toFixed(2)}%
+                          from current price
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            Confidence: {(selectedStock.prediction.confidence * 100).toFixed(0)}%
+                          </div>
+                          <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full",
+                                selectedStock.prediction.confidence > 0.7 ? "bg-success" :
+                                selectedStock.prediction.confidence > 0.4 ? "bg-warning" :
+                                "bg-danger"
+                              )}
+                              style={{ width: `${selectedStock.prediction.confidence * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <Button onClick={() => openBuyDialog(selectedStock)}>
-                  Buy {selectedStock.symbol}
-                </Button>
+                <div className="flex justify-end mt-4">
+                  <Button onClick={() => openBuyDialog(selectedStock)}>
+                    Buy {selectedStock.symbol}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
-            <Card className="h-full flex items-center justify-center">
-              <CardContent className="py-12 text-center">
-                <BarChart2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-xl font-medium">Select a stock</h3>
-                <p className="text-muted-foreground">
-                  Choose a stock from the list to view details and charts
-                </p>
+            <Card>
+              <CardContent className="flex justify-center items-center h-64">
+                <p className="text-muted-foreground">Select a stock to view details</p>
               </CardContent>
             </Card>
           )}
         </div>
       </div>
 
-      {/* Buy Stock Dialog */}
       <BuyStockDialog
         stock={selectedStock}
         isOpen={buyDialogOpen}
@@ -258,4 +331,10 @@ const Stocks = () => {
   );
 };
 
-export default Stocks;
+const StocksWithProvider = () => (
+  <DashboardProvider>
+    <Stocks />
+  </DashboardProvider>
+);
+
+export default StocksWithProvider;

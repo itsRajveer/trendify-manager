@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface User {
   id: string;
@@ -22,21 +22,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const mockUsers: User[] = [
-  { id: '1', name: 'Demo User', email: 'demo@example.com', balance: 10000 },
-];
+const API_URL = 'http://localhost:5000/api';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in localStorage
+    // Check for saved token and user in localStorage
+    const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    
+    if (token && savedUser) {
+      // Set up axios default headers for all requests
+      axios.defaults.headers.common['Authorization'] = token;
       setUser(JSON.parse(savedUser));
     }
+    
     setIsLoading(false);
   }, []);
 
@@ -61,19 +63,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       
-      const foundUser = mockUsers.find(u => u.email === email);
-      if (foundUser) {
-        setUser(foundUser);
-        localStorage.setItem('user', JSON.stringify(foundUser));
+      if (response.data.token) {
+        // Format user data from Firebase Auth response
+        const userData: User = {
+          id: response.data.user.uid,
+          name: response.data.user.displayName || 'User',
+          email: response.data.user.email,
+          balance: response.data.user.balance || 10000,
+        };
+        
+        setUser(userData);
+        
+        // Save token and user data to localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Set token for future API requests
+        axios.defaults.headers.common['Authorization'] = response.data.token;
+        
         toast.success('Successfully logged in');
-      } else {
-        throw new Error('Invalid credentials');
       }
     } catch (error) {
-      toast.error('Login failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Login failed: ' + (error instanceof Error ? error.message : 'Invalid credentials'));
       throw error;
     } finally {
       setIsLoading(false);
@@ -83,25 +96,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await axios.post(`${API_URL}/auth/signup`, { name, email, password });
       
-      const existingUser = mockUsers.find(u => u.email === email);
-      if (existingUser) {
-        throw new Error('User already exists');
+      if (response.data.token) {
+        // Format user data from Firebase Auth response
+        const userData: User = {
+          id: response.data.user.uid,
+          name: response.data.user.displayName || name,
+          email: response.data.user.email,
+          balance: 10000, // Starting balance
+        };
+        
+        setUser(userData);
+        
+        // Save token and user data to localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Set token for future API requests
+        axios.defaults.headers.common['Authorization'] = response.data.token;
+        
+        toast.success('Account created successfully');
       }
-      
-      const newUser: User = {
-        id: (mockUsers.length + 1).toString(),
-        name,
-        email,
-        balance: 10000, // Starting balance
-      };
-      
-      mockUsers.push(newUser);
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      toast.success('Account created successfully');
     } catch (error) {
       toast.error('Signup failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       throw error;
@@ -111,8 +127,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Clear user data and token
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    
+    // Remove authorization header
+    delete axios.defaults.headers.common['Authorization'];
+    
     toast.success('Logged out successfully');
   };
 

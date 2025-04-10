@@ -16,16 +16,17 @@ import StockChart from "./StockChart";
 import { getHistoricalData, processHistoricalDataForCharts } from "../service/stockService";
 import { TimeRange } from "@/types/stock";
 
-interface BuyStockDialogProps {
+interface SellStockDialogProps {
   stock: Stock | null;
   isOpen: boolean;
   onClose: () => void;
+  ownedShares: number;
 }
 
-const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
+const SellStockDialog = ({ stock, isOpen, onClose, ownedShares }: SellStockDialogProps) => {
   const [shares, setShares] = useState<number>(1);
-  const { buyStock } = useStock();
-  const { user, updateUserBalance } = useAuth();
+  const { sellStock } = useStock();
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
   const [gainLossInfo, setGainLossInfo] = useState<{ 
     change: string;
@@ -66,18 +67,18 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   if (!stock) return null;
 
   const total = shares * stock.price;
-  const canAfford = user ? user.balance >= total : false;
+  const canSell = shares <= ownedShares;
 
-  const handleBuy = async () => {
+  const handleSell = async () => {
     if (!user) return;
     
     try {
-      // Try to buy the stock - StockProvider will handle balance update
-      await buyStock(stock.symbol, shares);
+      // Try to sell the stock
+      await sellStock(stock.symbol, shares);
       onClose();
     } catch (error) {
-      console.error("Error during purchase:", error);
-      alert("An error occurred during purchase. Please try again.");
+      console.error("Error during sale:", error);
+      alert("An error occurred during sale. Please try again.");
     }
   };
 
@@ -85,7 +86,7 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Buy {stock.symbol} Stock</DialogTitle>
+          <DialogTitle>Sell {stock.symbol} Stock</DialogTitle>
           <DialogDescription>
             {stock.name} - Current price: ${stock.price.toFixed(2)}
           </DialogDescription>
@@ -101,29 +102,28 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
         
         <div className="space-y-3 max-h-[50vh] overflow-y-auto py-2 pr-1">
           <div className="space-y-2">
-            <Label htmlFor="shares">Number of shares to buy</Label>
+            <Label htmlFor="shares">Number of shares to sell</Label>
             <Input
               id="shares"
               type="number"
               min="1"
+              max={ownedShares}
               value={shares}
               onChange={(e) => setShares(parseInt(e.target.value) || 1)}
             />
+            <p className="text-sm text-muted-foreground">
+              You own {ownedShares} shares
+            </p>
           </div>
           
           <div className="flex justify-between text-sm">
-            <span>Total cost:</span>
+            <span>Total value:</span>
             <span className="font-semibold">${total.toFixed(2)}</span>
           </div>
           
-          <div className="flex justify-between text-sm">
-            <span>Your balance:</span>
-            <span className="font-semibold">${user?.balance.toFixed(2)}</span>
-          </div>
-          
-          {!canAfford && (
+          {!canSell && (
             <p className="text-sm text-danger">
-              Insufficient funds for this purchase
+              You can't sell more shares than you own
             </p>
           )}
 
@@ -166,8 +166,8 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleBuy} disabled={!canAfford}>
-            Buy {shares} share{shares !== 1 ? 's' : ''}
+          <Button onClick={handleSell} disabled={!canSell}>
+            Sell {shares} share{shares !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -175,4 +175,4 @@ const BuyStockDialog = ({ stock, isOpen, onClose }: BuyStockDialogProps) => {
   );
 };
 
-export default BuyStockDialog;
+export default SellStockDialog; 

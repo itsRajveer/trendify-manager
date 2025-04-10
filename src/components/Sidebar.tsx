@@ -56,7 +56,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             </NavLink>
           ))}
         </nav>
-        <div className="px-2 mt-6">
+        {/* <div className="px-2 mt-6">
           <NavLink
             to="/settings"
             className={({ isActive }) =>
@@ -71,7 +71,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             <Settings size={20} className={cn("flex-shrink-0", isOpen ? "mr-3" : "mx-auto")} />
             {isOpen && <span>Settings</span>}
           </NavLink>
-        </div>
+        </div> */}
       </div>
     </aside>
   );
